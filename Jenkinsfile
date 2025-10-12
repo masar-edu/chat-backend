@@ -38,8 +38,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                sh "docker push ${IMAGE_NAME}:latest"
-                sh "docker push ${IMAGE_NAME}:${COMMIT_HASH}"
+                sh 'docker push masarhub/synapse:latest'
             }
         }
     }
