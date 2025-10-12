@@ -20,8 +20,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    def COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     sh "docker build -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${COMMIT_HASH} -f docker/Dockerfile ."
+                    // Save COMMIT_HASH in env for later stages
+                    env.COMMIT_HASH = COMMIT_HASH
                 }
             }
         }
@@ -29,10 +31,9 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    // Use Docker Hub credentials stored in Jenkins
                     withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", 
-                                    usernameVariable: 'DOCKER_USER', 
-                                    passwordVariable: 'DOCKER_PASS')]) {
+                                                     usernameVariable: 'DOCKER_USER', 
+                                                     passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                     }
                 }
