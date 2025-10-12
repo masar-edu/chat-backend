@@ -1,0 +1,112 @@
+# Configuration file for Synapse.
+#
+# This is a YAML file: see [1] for a quick introduction. Note in particular
+# that *indentation is important*: all the elements of a list or dictionary
+# should have the same indentation.
+#
+# [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+#
+# For more information on how to configure Synapse, including a complete accounting of
+# each option, go to docs/usage/configuration/config_documentation.md or
+# https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
+server_name: "localhost"
+pid_file: /data/homeserver.pid
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    resources:
+      - names: [client, federation]
+        compress: false
+database:
+  name: psycopg2
+  args:
+    user: synapse
+    password: changeme
+    database: synapse
+    host: db
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+log_config: "/data/localhost.log.config"
+media_store_path: /data/media_store
+registration_shared_secret: "lZt;b,iy;9*C1R4iXOX74psbVqJEo-CfeE*b15xSUU19WvNm-y"
+report_stats: false
+macaroon_secret_key: "4aRo:Kg3;=kId_3^*2Bx6RZCMPp=nV6L8qO&+CJY+8mG.1JWVM"
+form_secret: "wi-#rf3FgW#JGBrD;o20qn8A=lUA9450dTAASfMN2V^D0Gk=Aq"
+signing_key_path: "/data/localhost.signing.key"
+trusted_key_servers:
+  - server_name: "matrix.org"
+
+# Rate limiting configuration - increase limits to prevent M_LIMIT_EXCEEDED errors
+rc_message:
+  per_second: 10
+  burst_count: 50
+
+rc_registration:
+  per_second: 10
+  burst_count: 50
+
+rc_login:
+  address:
+    per_second: 10
+    burst_count: 50
+  account:
+    per_second: 10
+    burst_count: 50
+  failed_attempts:
+    per_second: 10
+    burst_count: 50
+
+rc_admin_redaction:
+  per_second: 10
+  burst_count: 50
+
+rc_joins:
+  local:
+    per_second: 10
+    burst_count: 50
+  remote:
+    per_second: 10
+    burst_count: 50
+
+rc_joins_per_room:
+  per_second: 10
+  burst_count: 50
+
+rc_3pid_validation:
+  per_second: 10
+  burst_count: 50
+
+rc_invites:
+  per_room:
+    per_second: 10
+    burst_count: 50
+  per_user:
+    per_second: 10
+    burst_count: 50
+
+# Federation rate limiting
+rc_federation:
+  window_size: 1000
+  sleep_limit: 10
+  sleep_delay: 500
+  reject_limit: 50
+  concurrent: 3
+
+# Registration settings - require email for registration
+enable_registration: true
+registrations_require_3pid:
+  - email
+
+# Email configuration (you'll need to configure SMTP)
+email:
+  smtp_host: "your-smtp-server.com"
+  smtp_port: 587
+  smtp_user: "your-email@domain.com"
+  smtp_pass: "your-password"
+  notif_from: "noreply@localhost"
+
+
+# vim:ft=yaml
