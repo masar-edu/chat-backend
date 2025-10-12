@@ -20,8 +20,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    sh "docker build -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${COMMIT_HASH} -f docker/Dockerfile ."
+                    // Always rebuild 'latest'
+                    def COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    sh "docker build --no-cache -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${COMMIT_HASH} -f docker/Dockerfile ."
                 }
             }
         }
