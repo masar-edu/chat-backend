@@ -20,10 +20,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     sh "docker build -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${COMMIT_HASH} -f docker/Dockerfile ."
-                    // Save COMMIT_HASH in env for later stages
-                    env.COMMIT_HASH = COMMIT_HASH
                 }
             }
         }
@@ -31,10 +29,8 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", 
-                                                     usernameVariable: 'DOCKER_USER', 
-                                                     passwordVariable: 'DOCKER_PASS')]) {
-                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS}") {
+                        echo "Logged in to Docker Hub"
                     }
                 }
             }
@@ -42,10 +38,8 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                script {
-                    sh "docker push ${IMAGE_NAME}:latest"
-                    sh "docker push ${IMAGE_NAME}:${COMMIT_HASH}"
-                }
+                sh "docker push ${IMAGE_NAME}:latest"
+                sh "docker push ${IMAGE_NAME}:${COMMIT_HASH}"
             }
         }
     }
