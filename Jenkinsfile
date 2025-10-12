@@ -29,8 +29,11 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS}") {
-                        echo "Logged in to Docker Hub"
+                    // Use Docker Hub credentials stored in Jenkins
+                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", 
+                                    usernameVariable: 'DOCKER_USER', 
+                                    passwordVariable: 'DOCKER_PASS')]) {
+                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                     }
                 }
             }
@@ -38,7 +41,10 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                sh 'docker push masarhub/synapse:latest'
+                script {
+                    sh "docker push ${IMAGE_NAME}:latest"
+                    sh "docker push ${IMAGE_NAME}:${COMMIT_HASH}"
+                }
             }
         }
     }
