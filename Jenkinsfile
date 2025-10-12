@@ -2,21 +2,26 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "masarhub/synapse"
-        IMAGE_TAG = "latest"
+        GITHUB_CREDENTIALS = 'github-token'
+        DOCKERHUB_CREDENTIALS = 'docker-hub-credentials-id'
+        IMAGE_NAME = 'masarhub/synapse'
+        GIT_BRANCH = 'develop' // branch to pull
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout from GitHub') {
             steps {
-                checkout scm
+                git branch: "${GIT_BRANCH}",
+                    url: 'https://github.com/masar-edu/chat-backend.git',
+                    credentialsId: "${GITHUB_CREDENTIALS}"
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f docker/Dockerfile ."
+                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    sh "docker build -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${COMMIT_HASH} -f docker/Dockerfile ."
                 }
             }
         }
@@ -24,25 +29,26 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS}") {
+                        echo "Logged in to Docker Hub"
                     }
                 }
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Push Docker Image') {
             steps {
-                script {
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                }
+                sh "docker push ${IMAGE_NAME}:latest"
+                sh "docker push ${IMAGE_NAME}:${COMMIT_HASH}"
             }
         }
     }
 
     post {
         always {
-            sh "docker logout"
+            echo "Cleaning up local Docker images"
+            sh "docker rmi ${IMAGE_NAME}:latest || true"
+            sh "docker rmi ${IMAGE_NAME}:${COMMIT_HASH} || true"
         }
     }
 }
