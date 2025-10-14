@@ -6,7 +6,8 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'docker-hub-credentials-id'
         BASE_IMAGE = 'matrixdotorg/synapse:latest'
         IMAGE_NAME = 'masarhub/synapse'
-        GIT_BRANCH = 'develop' 
+        GIT_BRANCH = 'develop'
+        COMMIT_HASH = ''
     }
 
     stages {
@@ -40,8 +41,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Always rebuild 'latest'
-                    def COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    // Get commit hash and set as environment variable
+                    env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     
                     // Pull base image first
                     sh "docker pull ${BASE_IMAGE}"
@@ -52,7 +53,7 @@ pipeline {
                             --platform linux/amd64 \
                             --no-cache \
                             -t ${IMAGE_NAME}:latest \
-                            -t ${IMAGE_NAME}:${COMMIT_HASH} \
+                            -t ${IMAGE_NAME}:${env.COMMIT_HASH} \
                             -f docker/Dockerfile \
                             --push \
                             .
@@ -66,9 +67,32 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning up local Docker images"
-            sh "docker rmi ${IMAGE_NAME}:latest || true"
-            sh "docker rmi ${IMAGE_NAME}:${COMMIT_HASH} || true"
+            script {
+                echo "Cleaning up Docker buildx and local resources"
+                
+                // Clean up buildx cache
+                sh "docker buildx prune -f || true"
+                
+                // Clean up any dangling images
+                sh "docker image prune -f || true"
+                
+                // Remove buildx builder (optional)
+                sh "docker buildx rm multiarch-builder || true"
+                
+                echo "Pipeline completed. Images pushed to Docker Hub:"
+                echo "- ${IMAGE_NAME}:latest"
+                if (env.COMMIT_HASH) {
+                    echo "- ${IMAGE_NAME}:${env.COMMIT_HASH}"
+                }
+            }
+        }
+        
+        success {
+            echo "✅ Build and push successful!"
+        }
+        
+        failure {
+            echo "❌ Build failed. Check the logs above."
         }
     }
 }
