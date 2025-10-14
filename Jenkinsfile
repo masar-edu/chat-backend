@@ -6,7 +6,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'docker-hub-credentials-id'
         BASE_IMAGE = 'matrixdotorg/synapse:latest'
         IMAGE_NAME = 'masarhub/synapse'
-        GIT_BRANCH = 'develop' // branch to pull
+        GIT_BRANCH = 'develop' 
     }
 
     stages {
