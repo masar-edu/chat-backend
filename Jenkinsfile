@@ -33,7 +33,6 @@ pipeline {
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
 
                     if (env.SKIP_DOCKER_LOGIN == 'true') {
                         echo "Skipping Docker Hub login (testing mode)."
@@ -61,13 +60,12 @@ pipeline {
                     // Pull base image
                     sh "docker pull ${BASE_IMAGE}"
 
-                    // Build and push image
+                    // Build and push image (latest tag only)
                     sh """
                         docker buildx build \
                             --platform linux/amd64 \
                             --no-cache \
                             -t ${IMAGE_NAME}:latest \
-                            -t ${IMAGE_NAME}:${env.COMMIT_HASH} \
                             -f docker/Dockerfile \
                             --push \
                             .
@@ -75,7 +73,6 @@ pipeline {
 
                     echo "✅ Successfully built and pushed:"
                     echo "- ${IMAGE_NAME}:latest"
-                    echo "- ${IMAGE_NAME}:${env.COMMIT_HASH}"
                 }
             }
         }
@@ -87,7 +84,7 @@ pipeline {
                 echo "🧹 Cleaning up Docker resources"
                 sh "docker buildx prune -f || true"
                 sh "docker image prune -f || true"
-                echo "Pipeline completed for ${IMAGE_NAME}:${env.COMMIT_HASH}"
+                echo "Pipeline completed for ${IMAGE_NAME}:latest"
             }
         }
         success {
