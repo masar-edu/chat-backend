@@ -40,7 +40,6 @@ pipeline {
                         echo "⚠️ Git unavailable, using build number: ${env.COMMIT_HASH}"
                     }
                     
-                    // Ensure we have a valid version tag
                     if (!env.COMMIT_HASH || env.COMMIT_HASH.isEmpty()) {
                         env.COMMIT_HASH = "build-${BUILD_NUMBER}"
                         echo "🔄 Using fallback version: ${env.COMMIT_HASH}"
