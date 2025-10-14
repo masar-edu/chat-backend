@@ -4,6 +4,7 @@ pipeline {
     environment {
         GITHUB_CREDENTIALS = 'github-token'
         DOCKERHUB_CREDENTIALS = 'docker-hub-credentials-id'
+        BASE_IMAGE = 'matrixdotorg/synapse:latest'
         IMAGE_NAME = 'masarhub/synapse'
         GIT_BRANCH = 'develop' // branch to pull
     }
@@ -17,13 +18,12 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Setup Docker Buildx') {
             steps {
-                script {
-                    // Always rebuild 'latest'
-                    def COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    sh "docker build --no-cache -t ${IMAGE_NAME}:latest -t ${IMAGE_NAME}:${COMMIT_HASH} -f docker/Dockerfile ."
-                }
+                sh """
+                    docker buildx create --use --name multiarch-builder --driver docker-container || true
+                    docker buildx inspect --bootstrap
+                """
             }
         }
 
@@ -37,12 +37,31 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Build Docker Image') {
             steps {
-                sh "docker push ${IMAGE_NAME}:latest"
-                sh "docker push ${IMAGE_NAME}:${COMMIT_HASH}"
+                script {
+                    // Always rebuild 'latest'
+                    def COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    
+                    // Pull base image first
+                    sh "docker pull ${BASE_IMAGE}"
+                    
+                    // Build for linux/amd64 platform (single platform for reliability)
+                    sh """
+                        docker buildx build \
+                            --platform linux/amd64 \
+                            --no-cache \
+                            -t ${IMAGE_NAME}:latest \
+                            -t ${IMAGE_NAME}:${COMMIT_HASH} \
+                            -f docker/Dockerfile \
+                            --push \
+                            .
+                    """
+                }
             }
         }
+
+        // Push handled by buildx in build stage
     }
 
     post {
