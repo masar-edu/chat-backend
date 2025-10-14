@@ -7,7 +7,6 @@ pipeline {
         BASE_IMAGE = 'matrixdotorg/synapse:latest'
         IMAGE_NAME = 'masarhub/synapse'
         GIT_BRANCH = 'develop'
-        COMMIT_HASH = ''
         SKIP_DOCKER_LOGIN = 'false'
     }
 
@@ -27,6 +26,27 @@ pipeline {
                     docker buildx create --use --name multiarch-builder --driver docker-container
                     docker buildx inspect --bootstrap
                 """
+            }
+        }
+
+        stage('Get Version Info') {
+            steps {
+                script {
+                    // Get commit hash, fallback to build number if git fails
+                    try {
+                        env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                        echo "✅ Commit Hash: ${env.COMMIT_HASH}"
+                    } catch (Exception e) {
+                        env.COMMIT_HASH = "build-${BUILD_NUMBER}"
+                        echo "⚠️ Git unavailable, using build number: ${env.COMMIT_HASH}"
+                    }
+                    
+                    // Ensure we have a valid version tag
+                    if (!env.COMMIT_HASH || env.COMMIT_HASH.isEmpty()) {
+                        env.COMMIT_HASH = "build-${BUILD_NUMBER}"
+                        echo "🔄 Using fallback version: ${env.COMMIT_HASH}"
+                    }
+                }
             }
         }
 
@@ -60,12 +80,13 @@ pipeline {
                     // Pull base image
                     sh "docker pull ${BASE_IMAGE}"
 
-                    // Build and push image (latest tag only)
+                    // Build and push image with both latest and version tags
                     sh """
                         docker buildx build \
                             --platform linux/amd64 \
                             --no-cache \
                             -t ${IMAGE_NAME}:latest \
+                            -t ${IMAGE_NAME}:${env.COMMIT_HASH} \
                             -f docker/Dockerfile \
                             --push \
                             .
@@ -73,6 +94,7 @@ pipeline {
 
                     echo "✅ Successfully built and pushed:"
                     echo "- ${IMAGE_NAME}:latest"
+                    echo "- ${IMAGE_NAME}:${env.COMMIT_HASH}"
                 }
             }
         }
@@ -84,7 +106,11 @@ pipeline {
                 echo "🧹 Cleaning up Docker resources"
                 sh "docker buildx prune -f || true"
                 sh "docker image prune -f || true"
-                echo "Pipeline completed for ${IMAGE_NAME}:latest"
+                echo "Pipeline completed. Images pushed:"
+                echo "- ${IMAGE_NAME}:latest"
+                if (env.COMMIT_HASH) {
+                    echo "- ${IMAGE_NAME}:${env.COMMIT_HASH}"
+                }
             }
         }
         success {
