@@ -32,36 +32,38 @@ pipeline {
             }
         }
 
-        stage('Login to Docker Hub') {
-            steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKERHUB_CREDENTIALS}") {
-                        echo "Logged in to Docker Hub"
-                    }
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
                     // Get commit hash and set as environment variable
                     env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     
-                    // Pull base image first
-                    sh "docker pull ${BASE_IMAGE}"
-                    
-                    // Build for linux/amd64 platform (single platform for reliability)
-                    sh """
-                        docker buildx build \
-                            --platform linux/amd64 \
-                            --no-cache \
-                            -t ${IMAGE_NAME}:latest \
-                            -t ${IMAGE_NAME}:${env.COMMIT_HASH} \
-                            -f docker/Dockerfile \
-                            --push \
-                            .
-                    """
+                    // Login to Docker Hub
+                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", 
+                                                    passwordVariable: 'DOCKER_PASSWORD', 
+                                                    usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                        echo "Successfully logged in to Docker Hub"
+                        
+                        // Pull base image first
+                        sh "docker pull ${BASE_IMAGE}"
+                        
+                        // Build for linux/amd64 platform (single platform for reliability)
+                        sh """
+                            docker buildx build \
+                                --platform linux/amd64 \
+                                --no-cache \
+                                -t ${IMAGE_NAME}:latest \
+                                -t ${IMAGE_NAME}:${env.COMMIT_HASH} \
+                                -f docker/Dockerfile \
+                                --push \
+                                .
+                        """
+                        
+                        echo "Successfully built and pushed images:"
+                        echo "- ${IMAGE_NAME}:latest"
+                        echo "- ${IMAGE_NAME}:${env.COMMIT_HASH}"
+                    }
                 }
             }
         }
