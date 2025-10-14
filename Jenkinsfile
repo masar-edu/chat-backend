@@ -22,7 +22,11 @@ pipeline {
         stage('Setup Docker Buildx') {
             steps {
                 sh """
-                    docker buildx create --use --name multiarch-builder --driver docker-container || true
+                    # Remove existing builder if it exists
+                    docker buildx rm multiarch-builder || true
+                    
+                    # Create fresh builder
+                    docker buildx create --use --name multiarch-builder --driver docker-container
                     docker buildx inspect --bootstrap
                 """
             }
@@ -70,14 +74,14 @@ pipeline {
             script {
                 echo "Cleaning up Docker buildx and local resources"
                 
-                // Clean up buildx cache
+                // Clean up buildx cache (keep builder for reuse)
                 sh "docker buildx prune -f || true"
                 
                 // Clean up any dangling images
                 sh "docker image prune -f || true"
                 
-                // Remove buildx builder (optional)
-                sh "docker buildx rm multiarch-builder || true"
+                // Keep the builder for next runs (don't remove)
+                echo "Keeping multiarch-builder for future builds"
                 
                 echo "Pipeline completed. Images pushed to Docker Hub:"
                 echo "- ${IMAGE_NAME}:latest"
