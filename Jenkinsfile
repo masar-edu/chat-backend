@@ -77,10 +77,8 @@ pipeline {
                         }
                     }
 
-                    // Pull base image
                     sh "docker pull ${BASE_IMAGE}"
 
-                    // Build and push image with both latest and version tags
                     sh """
                         docker buildx build \
                             --platform linux/amd64 \
