@@ -8,6 +8,7 @@ pipeline {
         IMAGE_NAME = 'masarhub/synapse'
         GIT_BRANCH = 'develop'
         COMMIT_HASH = ''
+        SKIP_DOCKER_LOGIN = 'false' // Set to 'true' to skip Docker login for testing
     }
 
     stages {
@@ -42,7 +43,18 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", 
                                                     passwordVariable: 'DOCKER_PASSWORD', 
                                                     usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                        
+                        echo "Attempting to login to Docker Hub with username: ${DOCKER_USERNAME}"
+                        
+                        def loginResult = sh(
+                            script: 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin',
+                            returnStatus: true
+                        )
+                        
+                        if (loginResult != 0) {
+                            error "Docker Hub login failed. Please check credentials in Jenkins."
+                        }
+                        
                         echo "Successfully logged in to Docker Hub"
                         
                         // Pull base image first
