@@ -32,7 +32,6 @@ pipeline {
         stage('Get Version Info') {
             steps {
                 script {
-                    // Get commit hash, fallback to build number if git fails
                     try {
                         env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                         echo "✅ Commit Hash: ${env.COMMIT_HASH}"
