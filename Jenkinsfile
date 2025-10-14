@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         GITHUB_CREDENTIALS = 'github-token'
-        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials' // <-- your Jenkins credentials ID
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
         BASE_IMAGE = 'matrixdotorg/synapse:latest'
         IMAGE_NAME = 'masarhub/synapse'
         GIT_BRANCH = 'develop'
