@@ -19,6 +19,8 @@
 # [This file includes modifications made by New Vector Limited]
 #
 #
+import utils.transport
+import utils.session
 import argparse
 import sys
 import time
