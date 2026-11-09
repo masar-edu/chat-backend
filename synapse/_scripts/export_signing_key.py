@@ -19,6 +19,7 @@
 # [This file includes modifications made by New Vector Limited]
 #
 #
+import utils.net
 import utils.clients
 import utils.http_session
 import utils.transport
